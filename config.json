@@ -1,0 +1,10 @@
+{
+    "vmware_api_url": "",
+    "vmware_api_username": "",
+    "vmware_api_password": "",
+    "wmvare_api_insecure": true,
+    "klarity_storage_name": "",
+    "klarity_container_name": "",
+    "klarity_sas_token": "",
+    "scanned_objects": ["Network", "Datastore", "VirtualMachine", "HostSystem"]
+}
