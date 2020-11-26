@@ -115,8 +115,16 @@ func (s scanner) scanResources(ctx context.Context, objectType string) ([]interf
 	}
 	defer v.Destroy(ctx) //nolint:errcheck
 
+	ps := []string{"summary"}
+	noSummaryItems := []string{"Folder", "Network"}
+	for _, item := range noSummaryItems {
+		if item == objectType {
+			ps = []string{}
+		}
+	}
+
 	var resources []interface{}
-	err = v.Retrieve(ctx, []string{objectType}, []string{"summary"}, &resources)
+	err = v.Retrieve(ctx, []string{objectType}, ps, &resources)
 	if err != nil {
 		return nil, errors.WithContext(err, "unable to retrieve object", nil)
 	}

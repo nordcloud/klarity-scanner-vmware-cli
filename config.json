@@ -6,5 +6,5 @@
     "klarity_storage_name": "",
     "klarity_container_name": "",
     "klarity_sas_token": "",
-    "scanned_objects": ["Network", "Datastore", "VirtualMachine", "HostSystem"]
+    "scanned_objects": ["Folder", "Network", "Datastore", "VirtualMachine", "HostSystem", "ComputeResource"]
 }
