@@ -28,6 +28,7 @@ type report struct {
 }
 
 type configuration struct {
+	VMwareInstalationID  string   `json:"vmware_instalation_id"`
 	VMwareAPIURL         string   `json:"vmware_api_url"`
 	VMwareAPIUsername    string   `json:"vmware_api_username"`
 	VMwareAPIPassword    string   `json:"vmware_api_password"`
@@ -139,9 +140,10 @@ func (s scanner) saveReport(r report) error {
 	}
 
 	url := fmt.Sprintf(
-		"https://%s.blob.core.windows.net/%s/%s.json?%s",
+		"https://%s.blob.core.windows.net/%s/%s/%s.json?%s",
 		s.Configuration.KlarityStorageName,
 		s.Configuration.KlarityContainerName,
+		s.Configuration.VMwareInstalationID,
 		time.Now().Format(time.RFC3339),
 		s.Configuration.KlaritySASToken,
 	)
