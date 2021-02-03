@@ -1,11 +1,18 @@
 {
-    "vmware_instalation_id": "",
     "vmware_api_url": "",
     "vmware_api_username": "",
     "vmware_api_password": "",
     "wmvare_api_insecure": true,
+    "klarity_customer_id": "",
+    "klarity_installation_id": "",
     "klarity_storage_name": "",
-    "klarity_container_name": "",
     "klarity_sas_token": "",
-    "scanned_objects": ["Folder", "Network", "Datastore", "VirtualMachine", "HostSystem", "ComputeResource"]
+    "scanned_objects": [
+        "Folder",
+        "Network",
+        "Datastore",
+        "VirtualMachine",
+        "HostSystem",
+        "ComputeResource"
+    ]
 }

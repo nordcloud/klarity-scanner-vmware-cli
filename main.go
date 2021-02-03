@@ -28,15 +28,15 @@ type report struct {
 }
 
 type configuration struct {
-	VMwareInstalationID  string   `json:"vmware_instalation_id"`
-	VMwareAPIURL         string   `json:"vmware_api_url"`
-	VMwareAPIUsername    string   `json:"vmware_api_username"`
-	VMwareAPIPassword    string   `json:"vmware_api_password"`
-	VMwareAPIInsecure    bool     `json:"wmvare_api_insecure"`
-	KlarityStorageName   string   `json:"klarity_storage_name"`
-	KlarityContainerName string   `json:"klarity_container_name"`
-	KlaritySASToken      string   `json:"klarity_sas_token"`
-	ScannedObjects       []string `json:"scanned_objects"`
+	VMwareAPIURL          string   `json:"vmware_api_url"`
+	VMwareAPIUsername     string   `json:"vmware_api_username"`
+	VMwareAPIPassword     string   `json:"vmware_api_password"`
+	VMwareAPIInsecure     bool     `json:"wmvare_api_insecure"`
+	KlarityCustomerID     string   `json:"klarity_customer_id"`
+	KlarityInstallationID string   `json:"klarity_installation_id"`
+	KlarityStorageName    string   `json:"klarity_storage_name"`
+	KlaritySASToken       string   `json:"klarity_sas_token"`
+	ScannedObjects        []string `json:"scanned_objects"`
 }
 
 type scanner struct {
@@ -142,8 +142,8 @@ func (s scanner) saveReport(r report) error {
 	url := fmt.Sprintf(
 		"https://%s.blob.core.windows.net/%s/%s/%s.json?%s",
 		s.Configuration.KlarityStorageName,
-		s.Configuration.KlarityContainerName,
-		s.Configuration.VMwareInstalationID,
+		s.Configuration.KlarityCustomerID,
+		s.Configuration.KlarityInstallationID,
 		time.Now().Format(time.RFC3339),
 		s.Configuration.KlaritySASToken,
 	)
