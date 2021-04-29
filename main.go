@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-playground/validator"
 	errors "github.com/nordcloud/ncerrors/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/govmomi/session/cache"
@@ -28,15 +29,15 @@ type report struct {
 }
 
 type configuration struct {
-	VMwareAPIURL          string   `json:"vmware_api_url"`
-	VMwareAPIUsername     string   `json:"vmware_api_username"`
-	VMwareAPIPassword     string   `json:"vmware_api_password"`
-	VMwareAPIInsecure     bool     `json:"wmvare_api_insecure"`
-	KlarityCustomerID     string   `json:"klarity_customer_id"`
-	KlarityInstallationID string   `json:"klarity_installation_id"`
-	KlarityStorageName    string   `json:"klarity_storage_name"`
-	KlaritySASToken       string   `json:"klarity_sas_token"`
-	ScannedObjects        []string `json:"scanned_objects"`
+	VMwareAPIURL          string   `json:"vmware_api_url" validate:"required"`
+	VMwareAPIUsername     string   `json:"vmware_api_username" validate:"required"`
+	VMwareAPIPassword     string   `json:"vmware_api_password" validate:"required"`
+	VMwareAPIInsecure     bool     `json:"wmvare_api_insecure" validate:"required"`
+	KlarityCustomerID     string   `json:"klarity_customer_id" validate:"required"`
+	KlarityInstallationID string   `json:"klarity_installation_id" validate:"required"`
+	KlarityStorageName    string   `json:"klarity_storage_name" validate:"required"`
+	KlaritySASToken       string   `json:"klarity_sas_token" validate:"required"`
+	ScannedObjects        []string `json:"scanned_objects" validate:"required"`
 }
 
 type scanner struct {
@@ -64,6 +65,8 @@ func newVMwareScanner(ctx context.Context) (*scanner, error) {
 }
 
 func readConfiguration() (c configuration, err error) {
+	validate := validator.New()
+
 	jsonFile, err := os.Open("config.json")
 	if err != nil {
 		return c, errors.WithContext(err, "cannot load `config.json` file", nil)
@@ -80,8 +83,13 @@ func readConfiguration() (c configuration, err error) {
 		return c, errors.WithContext(err, "bad configuration", nil)
 	}
 
+	if err := validate.Struct(cfg); err != nil {
+		return c, errors.WithContext(err, "bad configuration", nil)
+	}
+
 	return cfg, nil
 }
+
 func getVMwareClient(ctx context.Context, cfg configuration) (*vim25.Client, error) {
 	urlFlag := flag.String("url", cfg.VMwareAPIURL, fmt.Sprintf("ESX or vCenter URL [%s]", cfg.VMwareAPIURL))
 	insecureFlag := flag.Bool("insecure", cfg.VMwareAPIInsecure, fmt.Sprintf("Don't verify the server's certificate chain [%v]", cfg.VMwareAPIInsecure))
