@@ -1,0 +1,30 @@
+# Copyright 2020 Nordcloud Oy or its affiliates. All Rights Reserved.
+
+name: License
+on:
+  pull_request:
+  push:
+    branches: master
+jobs:
+  verify-license:
+    name: Verify license
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: "on"
+      GOPROXY: "direct"
+      GOSUMDB: "off"
+    steps:
+      - name: Set up Go 1.15
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v1
+
+      - name: Verify license headers exist
+        run: |
+          set -e
+          go get -u github.com/google/addlicense
+          addlicense -c "Nordcloud Oy" -f LICENSE.tmpl -check .
