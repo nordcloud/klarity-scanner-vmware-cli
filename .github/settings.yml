@@ -1,0 +1,11 @@
+# Copyright 2020 Nordcloud Oy or its affiliates. All Rights Reserved.
+
+_extends: nordcloud/github-settings:.github/settings.yml
+repository:
+  name: "managed-cloud-calculator"
+  description: "{{repoDescription}}"
+teams:
+  - name: "{{repoTeamName}}"
+    permission: maintain
+  - name: architects
+    permission: admin
