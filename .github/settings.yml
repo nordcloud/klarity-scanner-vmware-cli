@@ -3,9 +3,7 @@
 _extends: nordcloud/github-settings:.github/settings.yml
 repository:
   name: "klarity-scanner-vmware-cli"
-  description: "{{repoDescription}}"
+  description: "Klarity self-hosted scanner for your VMware environments"
 teams:
-  - name: "{{repoTeamName}}"
-    permission: maintain
   - name: architects
     permission: admin
