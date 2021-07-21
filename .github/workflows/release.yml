@@ -1,7 +1,7 @@
 on:
   push:
     tags:
-    - v*
+      - v*
 
 jobs:
   release:
@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
-    - run: make build
+    - run: make dist
     - uses: actions/create-release@v1
       id: create_release
       env:
@@ -18,7 +18,7 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: Release ${{ github.ref }}
-        draft: false
+        draft: true
         prerelase: false
     - name: Upload asset (Windows amd64)
       uses: actions/upload-release-asset@v1
@@ -26,8 +26,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/klarity-scanner-vmware-cli.exe
-        asset_name: klarity-scanner-vmware-cli.exe (windows amd64)
+        asset_path: ./build/klarity-scanner-vmware-cli-win-amd64.exe
+        asset_name: klarity-scanner-vmware-cli-win-amd64.exe (windows amd64)
         asset_content_type: application/binary
     - name: Upload asset (Linux amd64)
       uses: actions/upload-release-asset@v1
@@ -35,6 +35,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/klarity-scanner-vmware-cli
-        asset_name: klarity-scanner-vmware-cli (linux amd64)
+        asset_path: ./build/klarity-scanner-vmware-cli-linux-amd64
+        asset_name: klarity-scanner-vmware-cli-linux-amd64 (linux amd64)
         asset_content_type: application/binary
