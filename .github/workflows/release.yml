@@ -36,5 +36,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./build/klarity-scanner-vmware-cli-linux-amd64.zip
-        asset_name: klarity-scanner-vmware-cli-windows-amd64.zip
+        asset_name: klarity-scanner-vmware-cli-linux-amd64.zip
         asset_content_type: application/binary
