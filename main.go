@@ -18,6 +18,8 @@ import (
 	errors "github.com/nordcloud/ncerrors/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/vmware/govmomi/session/cache"
+	"github.com/vmware/govmomi/vapi/rest"
+	"github.com/vmware/govmomi/vapi/tags"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
@@ -25,6 +27,7 @@ import (
 
 type report struct {
 	Errors         map[string]string        `json:"errors"`
+	Tags           map[string][]*tags.Tag   `json:"tags"`
 	ScannedObjects map[string][]interface{} `json:"scanned_objects"`
 }
 
@@ -124,11 +127,11 @@ func (s scanner) scanResources(ctx context.Context, objectType string) ([]interf
 	}
 	defer v.Destroy(ctx) //nolint:errcheck
 
-	ps := []string{"summary"}
+	ps := []string{"name", "tag", "summary"}
 	noSummaryItems := []string{"Folder", "Network"}
 	for _, item := range noSummaryItems {
 		if item == objectType {
-			ps = []string{}
+			ps = []string{"name", "tag"}
 		}
 	}
 
@@ -172,6 +175,39 @@ func (s scanner) saveReport(r report) error {
 	return nil
 }
 
+func getTags(ctx context.Context, scanner *scanner) map[string][]*tags.Tag {
+	re := rest.NewClient(scanner.VMwareClient)
+	re.Login(ctx, url.UserPassword(
+		scanner.Configuration.VMwareAPIUsername,
+		scanner.Configuration.VMwareAPIPassword,
+	))
+
+	m := tags.NewManager(re)
+	tagList, err := m.ListTags(ctx)
+	if err != nil {
+		errors.LogErrorPlain(errors.WithContext(err, "unable to list tags", nil))
+	}
+
+	t := make(map[string][]*tags.Tag)
+	for _, tag := range tagList {
+		obj, err := m.GetAttachedObjectsOnTags(ctx, []string{tag})
+		if err != nil {
+			errors.LogErrorPlain(errors.WithContext(err, "unable to get attached objects on tags", nil))
+		}
+
+		tag2, err := m.GetTag(ctx, tag)
+		if err != nil {
+			errors.LogErrorPlain(errors.WithContext(err, "unable to get tag", nil))
+		}
+
+		for _, elem := range obj[0].ObjectIDs {
+			t[elem.Reference().Value] = append(t[elem.Reference().Value], tag2)
+		}
+	}
+
+	return t
+}
+
 func execute() error {
 	ctx := context.Background()
 
@@ -192,6 +228,7 @@ func execute() error {
 
 	r := report{
 		ScannedObjects: so,
+		Tags:           getTags(ctx, scanner),
 		Errors:         e,
 	}
 
