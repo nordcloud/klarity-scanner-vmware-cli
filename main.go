@@ -185,7 +185,7 @@ func (s scanner) saveReport(r report) error {
 	return nil
 }
 
-func getTagMappings(ctx context.Context, scanner *scanner) []tagMapping {
+func getTagsMapping(ctx context.Context, scanner *scanner) []tagMapping {
 	re := rest.NewClient(scanner.VMwareClient)
 	if err := re.Login(ctx, url.UserPassword(
 		scanner.Configuration.VMwareAPIUsername,
@@ -220,6 +220,7 @@ func getTagMappings(ctx context.Context, scanner *scanner) []tagMapping {
 			continue
 		}
 
+		// we search for only one tag, so there is only one object
 		for _, elem := range obj[0].ObjectIDs {
 			tagsMapping = append(tagsMapping, tagMapping{
 				ResType:  elem.Reference().Type,
@@ -253,7 +254,7 @@ func execute() error {
 
 	r := report{
 		ScannedObjects: so,
-		TagsMapping:    getTagMappings(ctx, scanner),
+		TagsMapping:    getTagsMapping(ctx, scanner),
 		Errors:         errs,
 	}
 
