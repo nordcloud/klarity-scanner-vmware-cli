@@ -25,9 +25,16 @@ import (
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
+type tagMapping struct {
+	ResType  string `json:"res_type"`
+	ResValue string `json:"res_value"`
+	TagName  string `json:"tag_name"`
+	TagValue string `json:"tag_value"`
+}
+
 type report struct {
 	Errors         map[string]string        `json:"errors"`
-	Tags           map[string][]*tags.Tag   `json:"tags"`
+	TagsMapping    []tagMapping             `json:"tags_mapping"`
 	ScannedObjects map[string][]interface{} `json:"scanned_objects"`
 }
 
@@ -50,18 +57,18 @@ type scanner struct {
 }
 
 func newVMwareScanner(ctx context.Context) (*scanner, error) {
-	configuration, err := readConfiguration()
+	c, err := readConfiguration()
 	if err != nil {
 		return nil, err
 	}
 
-	vmwareClient, err := getVMwareClient(ctx, configuration)
+	vmwareClient, err := getVMwareClient(ctx, c)
 	if err != nil {
 		return nil, err
 	}
 
 	return &scanner{
-		Configuration: configuration,
+		Configuration: c,
 		VMwareClient:  vmwareClient,
 		ViewManager:   view.NewManager(vmwareClient),
 	}, nil
@@ -95,7 +102,10 @@ func readConfiguration() (c configuration, err error) {
 
 func getVMwareClient(ctx context.Context, cfg configuration) (*vim25.Client, error) {
 	urlFlag := flag.String("url", cfg.VMwareAPIURL, fmt.Sprintf("ESX or vCenter URL [%s]", cfg.VMwareAPIURL))
-	insecureFlag := flag.Bool("insecure", cfg.VMwareAPIInsecure, fmt.Sprintf("Don't verify the server's certificate chain [%v]", cfg.VMwareAPIInsecure))
+	insecureFlag := flag.Bool(
+		"insecure",
+		cfg.VMwareAPIInsecure,
+		fmt.Sprintf("Don't verify the server's certificate chain [%v]", cfg.VMwareAPIInsecure))
 
 	// Parse URL from string
 	u, err := soap.ParseURL(*urlFlag)
@@ -150,7 +160,7 @@ func (s scanner) saveReport(r report) error {
 		return errors.WithContext(err, "bad data in report", nil)
 	}
 
-	url := fmt.Sprintf(
+	reportURL := fmt.Sprintf(
 		"https://%s.blob.core.windows.net/%s/%s/%s.json?%s",
 		s.Configuration.KlarityStorageName,
 		s.Configuration.KlarityCustomerID,
@@ -158,7 +168,7 @@ func (s scanner) saveReport(r report) error {
 		time.Now().Format(time.RFC3339),
 		s.Configuration.KlaritySASToken,
 	)
-	req, err := http.NewRequest("PUT", url, bytes.NewReader(file))
+	req, err := http.NewRequest("PUT", reportURL, bytes.NewReader(file))
 	if err != nil {
 		return errors.WithContext(err, "cannot create HTTP request", nil)
 	}
@@ -175,37 +185,52 @@ func (s scanner) saveReport(r report) error {
 	return nil
 }
 
-func getTags(ctx context.Context, scanner *scanner) map[string][]*tags.Tag {
+func getTagMappings(ctx context.Context, scanner *scanner) []tagMapping {
 	re := rest.NewClient(scanner.VMwareClient)
-	re.Login(ctx, url.UserPassword(
+	if err := re.Login(ctx, url.UserPassword(
 		scanner.Configuration.VMwareAPIUsername,
 		scanner.Configuration.VMwareAPIPassword,
-	))
-
-	m := tags.NewManager(re)
-	tagList, err := m.ListTags(ctx)
-	if err != nil {
-		errors.LogErrorPlain(errors.WithContext(err, "unable to list tags", nil))
+	)); err != nil {
+		errors.LogErrorPlain(errors.WithContext(err, "unable to login to REST API", nil))
+		return nil
 	}
 
-	t := make(map[string][]*tags.Tag)
-	for _, tag := range tagList {
-		obj, err := m.GetAttachedObjectsOnTags(ctx, []string{tag})
+	m := tags.NewManager(re)
+	allTags, err := m.GetTags(ctx)
+	if err != nil {
+		errors.LogErrorPlain(errors.WithContext(err, "unable to get tags", nil))
+		return nil
+	}
+
+	tagsMapping := []tagMapping{}
+	for _, tag := range allTags {
+		obj, err := m.GetAttachedObjectsOnTags(ctx, []string{tag.Name})
 		if err != nil {
 			errors.LogErrorPlain(errors.WithContext(err, "unable to get attached objects on tags", nil))
+			continue
 		}
 
-		tag2, err := m.GetTag(ctx, tag)
+		if len(obj) == 0 {
+			continue
+		}
+
+		category, err := m.GetCategory(ctx, tag.CategoryID)
 		if err != nil {
-			errors.LogErrorPlain(errors.WithContext(err, "unable to get tag", nil))
+			errors.LogErrorPlain(errors.WithContext(err, "unable to get category", nil))
+			continue
 		}
 
 		for _, elem := range obj[0].ObjectIDs {
-			t[elem.Reference().Value] = append(t[elem.Reference().Value], tag2)
+			tagsMapping = append(tagsMapping, tagMapping{
+				ResType:  elem.Reference().Type,
+				ResValue: elem.Reference().Value,
+				TagName:  category.Name,
+				TagValue: tag.Name,
+			})
 		}
 	}
 
-	return t
+	return tagsMapping
 }
 
 func execute() error {
@@ -217,19 +242,19 @@ func execute() error {
 	}
 
 	so := make(map[string][]interface{})
-	e := make(map[string]string)
+	errs := make(map[string]string)
 	for _, objectType := range scanner.Configuration.ScannedObjects {
 		so[objectType], err = scanner.scanResources(ctx, objectType)
 		if err != nil {
 			errors.LogErrorPlain(errors.WithContext(err, fmt.Sprintf("unable to scan object '%s'", objectType), nil))
-			e[objectType] = err.Error()
+			errs[objectType] = err.Error()
 		}
 	}
 
 	r := report{
 		ScannedObjects: so,
-		Tags:           getTags(ctx, scanner),
-		Errors:         e,
+		TagsMapping:    getTagMappings(ctx, scanner),
+		Errors:         errs,
 	}
 
 	return scanner.saveReport(r)
