@@ -1,30 +1,23 @@
-# Copyright 2020 Nordcloud Oy or its affiliates. All Rights Reserved.
+# Copyright 2021 Nordcloud Oy or its affiliates. All Rights Reserved.
 
-name: License
+name: Action
 on:
   pull_request:
-  push:
-    branches: master
+    branches: [ master ]
 jobs:
-  verify-license:
-    name: Verify license
+  licenses:
+    name: Check licenses
     runs-on: ubuntu-latest
-    env:
-      GO111MODULE: "on"
-      GOPROXY: "direct"
-      GOSUMDB: "off"
     steps:
-      - name: Set up Go 1.15
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.15
-        id: go
-
       - name: Check out code
-        uses: actions/checkout@v1
-
-      - name: Verify license headers exist
-        run: |
-          set -e
-          go get -u github.com/google/addlicense
-          addlicense -c "Nordcloud Oy" -f LICENSE.tmpl -check .
+        uses: actions/checkout@v2
+      - id: changed-files
+        uses: jitterbit/get-changed-files@v1
+      - uses: nordcloud/addlicense@master
+        with:
+          directory-pattern: '${{ steps.changed-files.outputs.all }}'
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v7.0.0
+        with:
+          message: "Update license headers"
+          add: '${{ steps.changed-files.outputs.all }}'
